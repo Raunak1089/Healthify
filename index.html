@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthifier - Daily Log</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Use Inter as the default font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Custom styles for a subtle scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c4c4c4;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Hide number input spinners */
+        input[type='number']::-webkit-outer-spin-button,
+        input[type='number']::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type='number'] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="h-full flex items-center justify-center bg-gray-100 p-4">
+
+    <!-- Main App Container -->
+    <div id="app" class="w-full max-w-lg h-[80vh] max-h-[800px] bg-white shadow-xl rounded-2xl flex flex-col overflow:hidden">
+
+        <!-- Header / Navigation -->
+        <header class="border-b border-gray-200">
+            <nav class="flex -mb-px" aria-label="Tabs">
+                <!-- Tab 1: Daily Log -->
+                <button id="tab-log"
+                    class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Daily Log
+                </button>
+                <!-- Tab 2: Record Intake -->
+                <button id="tab-record"
+                    class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Record Intake
+                </button>
+            </nav>
+        </header>
+
+        <!-- ======================== -->
+        <!-- Tab Content 1: Daily Log -->
+        <!-- ======================== -->
+        <main id="content-log" class="flex-1 overflow-y-auto p-6 space-y-4">
+            <h1 class="text-xl font-bold text-gray-800">Your Health Summary</h1>
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Energy</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Protein</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Rows will be injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <p id="log-empty-state" class="text-center text-gray-500 py-10 hidden">No entries recorded yet. Go to the "Record Intake" tab to start logging.</p>
+        </main>
+
+        <!-- =========================== -->
+        <!-- Tab Content 2: Record Intake -->
+        <!-- =========================== -->
+        <main id="content-record" class="flex-1 flex flex-col overflow-y-auto p-6 space-y-4">
+            <!-- Date Picker -->
+            <div class="flex items-center justify-between gap-4">
+                 <label for="record-date" class="font-medium text-gray-700">Logging for:</label>
+                 <input type="date" id="record-date" name="record-date"
+                     class="block w-auto flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+            </div>
+            
+            <!-- Search Bar -->
+            <div>
+                <label for="search" class="sr-only">Search food</label>
+                <div class="relative rounded-md shadow-sm">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                         <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="search" name="search" id="search-bar"
+                        class="block w-full rounded-md border-gray-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3"
+                        placeholder="Search food items...">
+                </div>
+            </div>
+
+            <!-- Food List -->
+            <div id="food-list-container" class="flex-1 space-y-3 overflow-y-auto pr-2 -mr-2">
+                <!-- Food items will be injected by JS -->
+            </div>
+            
+            <!-- Add New Item Button (shows on no match) -->
+            <div id="add-new-item-button-container" class="hidden">
+                 <button id="btn-show-add-modal"
+                    class="w-full flex justify-center items-center rounded-md border border-transparent bg-indigo-600 px-4 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
+                    Add new item: "<span id="new-item-name-preview" class="font-bold ml-1"></span>"
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ======================== -->
+    <!-- Modal 1: Add New Item    -->
+    <!-- ======================== -->
+    <div id="modal-add-item" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-medium text-gray-900">Add New Food Item</h2>
+                <button id="btn-close-add-modal" class="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <form id="form-add-item" class="space-y-4">
+                <div>
+                    <label for="new-name" class="block text-sm font-medium text-gray-700">Food Name</label>
+                    <input type="text" id="new-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                </div>
+                
+                <!-- NEW: Type Selector -->
+                <fieldset>
+                    <legend class="block text-sm font-medium text-gray-700">Quantity Type</legend>
+                    <div class="mt-1 flex gap-4">
+                        <div class="flex items-center">
+                            <input id="type-unit" name="quantity-type" type="radio" checked class="h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="type-unit" class="ml-2 block text-sm text-gray-900">By Unit (e.g., piece, cup)</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="type-amount" name="quantity-type" type="radio" class="h-4 w-4 text-indigo-600 border-gray-300">
+                            <label for="type-amount" class="ml-2 block text-sm text-gray-900">By Amount (e.g., g, ml)</label>
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <!-- NEW: Amount field (conditionally hidden) -->
+                <div id="amount-input-container" class="hidden">
+                    <label for="new-base-amount" class="block text-sm font-medium text-gray-700">Base Amount</label>
+                    <input type="number" id="new-base-amount" min="0" step="0.1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="100">
+                </div>
+
+                <div>
+                    <label id="label-new-kcal" for="new-kcal" class="block text-sm font-medium text-gray-700">Energy (kcal) / unit</label>
+                    <input type="number" id="new-kcal" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                </div>
+                <div>
+                    <label id="label-new-protein" for="new-protein" class="block text-sm font-medium text-gray-700">Protein (g) / unit</label>
+                    <input type="number" id="new-protein" min="0" step="0.1" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                </div>
+                 <div>
+                    <label for="new-unit-name" class="block text-sm font-medium text-gray-700">Unit Name</label>
+                    <input type="text" id="new-unit-name" required placeholder="piece" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                </div>
+                <button type="submit"
+                    class="w-full flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
+                    Save Item
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================== -->
+    <!-- Modal 2: Log Details     -->
+    <!-- ======================== -->
+    <div id="modal-log-details" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-medium text-gray-900">Details for <span id="modal-detail-date" class="font-bold"></span></h2>
+                <button id="btn-close-detail-modal" class="text-gray-400 hover:text-gray-600">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <!-- Details List -->
+            <ul id="modal-detail-list" class="divide-y divide-gray-200 max-h-60 overflow-y-auto pr-2">
+                <!-- List items injected by JS -->
+            </ul>
+            <!-- Totals -->
+            <div class="pt-4 border-t border-gray-200">
+                 <div class="flex justify-between text-base font-medium text-gray-900">
+                    <p>Total:</p>
+                    <p id="modal-detail-totals"></p>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application -->
+    <script>
+        // Use a single object to manage the application
+        const app = {
+            // --- STATE ---
+            state: {
+                activeTab: 'log', // 'log' or 'record'
+                searchTerm: '',
+                selectedDate: '', // YYYY-MM-DD
+                modals: {
+                    addItemOpen: false,
+                    logDetailOpen: false,
+                },
+                selectedLogDate: null, // Date for the detail modal
+            },
+
+            // --- DATA ---
+            data: {
+                masterList: [], // [{ name, type, kcal, protein, unitName, baseAmount? }, ...]
+                dailyLog: {},   // { "YYYY-MM-DD": [{ name, quantity }, ...], ... }
+            },
+
+            // --- LOCALSTORAGE KEYS ---
+            keys: {
+                master: 'healthifier-masterList',
+                log: 'healthifier-dailyLog',
+            },
+
+            // --- CONSTANTS ---
+            constants: {
+                AMOUNT_INCREMENT: 20,
+                UNIT_INCREMENT: 1,
+            },
+
+            // --- DOM ELEMENTS ---
+            elements: {},
+
+            // --- INITIALIZATION ---
+            init() {
+                // 1. Cache all DOM elements
+                this.elements.tabLog = document.getElementById('tab-log');
+                this.elements.tabRecord = document.getElementById('tab-record');
+                this.elements.contentLog = document.getElementById('content-log');
+                this.elements.contentRecord = document.getElementById('content-record');
+                
+                this.elements.recordDate = document.getElementById('record-date');
+                this.elements.searchBar = document.getElementById('search-bar');
+                this.elements.foodList = document.getElementById('food-list-container');
+                this.elements.addBtnContainer = document.getElementById('add-new-item-button-container');
+                this.elements.addBtnShow = document.getElementById('btn-show-add-modal');
+                this.elements.addBtnNamePreview = document.getElementById('new-item-name-preview');
+
+                this.elements.logTableBody = document.getElementById('log-table-body');
+                this.elements.logEmptyState = document.getElementById('log-empty-state');
+
+                // Add Item Modal
+                this.elements.modalAddItem = document.getElementById('modal-add-item');
+                this.elements.btnCloseAddModal = document.getElementById('btn-close-add-modal');
+                this.elements.formAddItem = document.getElementById('form-add-item');
+                this.elements.inputNewName = document.getElementById('new-name');
+                this.elements.radioTypeUnit = document.getElementById('type-unit');
+                this.elements.radioTypeAmount = document.getElementById('type-amount');
+                this.elements.amountInputContainer = document.getElementById('amount-input-container');
+                this.elements.inputNewBaseAmount = document.getElementById('new-base-amount');
+                this.elements.labelNewKcal = document.getElementById('label-new-kcal');
+                this.elements.inputNewKcal = document.getElementById('new-kcal');
+                this.elements.labelNewProtein = document.getElementById('label-new-protein');
+                this.elements.inputNewProtein = document.getElementById('new-protein');
+                this.elements.inputNewUnitName = document.getElementById('new-unit-name');
+                
+                // Log Detail Modal
+                this.elements.modalLogDetail = document.getElementById('modal-log-details');
+                this.elements.btnCloseDetailModal = document.getElementById('btn-close-detail-modal');
+                this.elements.modalDetailDate = document.getElementById('modal-detail-date');
+                this.elements.modalDetailList = document.getElementById('modal-detail-list');
+                this.elements.modalDetailTotals = document.getElementById('modal-detail-totals');
+
+                // 2. Load data from LocalStorage
+                this.loadData();
+
+                // 3. Set default date to today
+                this.state.selectedDate = new Date().toISOString().split('T')[0];
+                this.elements.recordDate.value = this.state.selectedDate;
+
+                // 4. Attach all event listeners
+                this.attachListeners();
+
+                // 5. Initial render
+                this.render();
+            },
+
+            // --- EVENT LISTENERS ---
+            attachListeners() {
+                // Tab navigation
+                this.elements.tabLog.addEventListener('click', () => this.setActiveTab('log'));
+                this.elements.tabRecord.addEventListener('click', () => this.setActiveTab('record'));
+
+                // Record tab listeners
+                this.elements.recordDate.addEventListener('change', (e) => this.handleDateChange(e.target.value));
+                this.elements.searchBar.addEventListener('input', (e) => this.handleSearch(e.target.value));
+
+                // Add Item Modal listeners
+                this.elements.addBtnShow.addEventListener('click', () => this.showAddItemModal());
+                this.elements.btnCloseAddModal.addEventListener('click', () => this.hideAddItemModal());
+                this.elements.formAddItem.addEventListener('submit', (e) => this.handleSaveNewItem(e));
+                this.elements.radioTypeUnit.addEventListener('change', () => this.handleTypeChange());
+                this.elements.radioTypeAmount.addEventListener('change', () => this.handleTypeChange());
+
+
+                // Quantity buttons (using event delegation)
+                this.elements.foodList.addEventListener('click', (e) => {
+                    const btn = e.target.closest('button[data-name]');
+                    if (!btn) return;
+                    
+                    const name = btn.dataset.name;
+                    const action = btn.dataset.action; // 'plus' or 'minus'
+                    this.updateItemQuantity(name, action);
+                });
+
+                // Log Detail Modal listeners
+                this.elements.logTableBody.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr[data-date]');
+                    if (row) {
+                        this.showLogDetailModal(row.dataset.date);
+                    }
+                });
+                this.elements.btnCloseDetailModal.addEventListener('click', () => this.hideLogDetailModal());
+            },
+
+            // --- DATA HANDLERS ---
+            loadData() {
+                const master = localStorage.getItem(this.keys.master);
+                const log = localStorage.getItem(this.keys.log);
+                let needsSave = false;
+
+                let masterList = master ? JSON.parse(master) : [];
+                
+                // --- MIGRATION ---
+                // Check for old data structure and migrate it
+                masterList = masterList.map(item => {
+                    if (!item.type) { // Old data if 'type' doesn't exist
+                        needsSave = true;
+                        return {
+                            name: item.name,
+                            type: 'unit', // Assume all old data was 'unit'
+                            kcal: item.kcal,
+                            protein: item.protein,
+                            unitName: item.unit || 'unit' // Use old 'unit' field
+                        };
+                    }
+                    return item; // Item is already new, return as-is
+                });
+
+                this.data.masterList = masterList;
+                this.data.dailyLog = log ? JSON.parse(log) : {};
+
+                if (needsSave) {
+                    this.saveData(); // Save the migrated data
+                }
+            },
+
+            saveData() {
+                localStorage.setItem(this.keys.master, JSON.stringify(this.data.masterList));
+                localStorage.setItem(this.keys.log, JSON.stringify(this.data.dailyLog));
+            },
+
+            // --- STATE & UI HANDLERS ---
+            setActiveTab(tabName) {
+                this.state.activeTab = tabName;
+                this.render();
+            },
+
+            handleDateChange(date) {
+                this.state.selectedDate = date;
+                this.renderRecordList(); // Only re-render the food list
+            },
+
+            handleSearch(term) {
+                this.state.searchTerm = term.toLowerCase();
+                this.renderRecordList(); // Only re-render the food list
+            },
+
+            /**
+             * Handles radio button change in Add Item modal
+             */
+            handleTypeChange() {
+                if (this.elements.radioTypeUnit.checked) {
+                    this.elements.amountInputContainer.classList.add('hidden');
+                    this.elements.labelNewKcal.textContent = 'Energy (kcal) / unit';
+                    this.elements.labelNewProtein.textContent = 'Protein (g) / unit';
+                    this.elements.inputNewUnitName.placeholder = 'piece';
+                } else {
+                    this.elements.amountInputContainer.classList.remove('hidden');
+                    this.elements.labelNewKcal.textContent = 'Energy (kcal) / base amount';
+                    this.elements.labelNewProtein.textContent = 'Protein (g) / base amount';
+                    this.elements.inputNewUnitName.placeholder = 'g';
+                }
+            },
+
+            showAddItemModal() {
+                this.state.modals.addItemOpen = true;
+                // Pre-fill name from search bar
+                this.elements.inputNewName.value = this.state.searchTerm;
+                // Reset form to default "unit" state
+                this.elements.radioTypeUnit.checked = true;
+                this.handleTypeChange();
+                this.renderModals();
+            },
+
+            hideAddItemModal() {
+                this.state.modals.addItemOpen = false;
+                this.elements.formAddItem.reset();
+                this.handleTypeChange(); // Ensure UI is reset
+                this.renderModals();
+            },
+
+            showLogDetailModal(date) {
+                this.state.selectedLogDate = date;
+                this.state.modals.logDetailOpen = true;
+                this.renderModals();
+            },
+
+            hideLogDetailModal() {
+                this.state.modals.logDetailOpen = false;
+                this.renderModals();
+            },
+
+            // --- CORE LOGIC ---
+            
+            /**
+             * Handles saving a new item to the master list
+             */
+            handleSaveNewItem(event) {
+                event.preventDefault();
+                const name = this.elements.inputNewName.value.trim();
+                const kcal = parseFloat(this.elements.inputNewKcal.value);
+                const protein = parseFloat(this.elements.inputNewProtein.value);
+                const unitName = this.elements.inputNewUnitName.value.trim() || 'unit';
+                const type = this.elements.radioTypeUnit.checked ? 'unit' : 'amount';
+                
+                if (!name || isNaN(kcal) || isNaN(protein)) {
+                     alert('Please fill out all required fields with valid numbers.');
+                     return;
+                }
+
+                // Check for duplicates
+                if (this.data.masterList.find(item => item.name.toLowerCase() === name.toLowerCase())) {
+                    alert('An item with this name already exists.');
+                    return;
+                }
+                
+                const newItem = { name, kcal, protein, unitName, type };
+
+                if (type === 'amount') {
+                    const baseAmount = parseFloat(this.elements.inputNewBaseAmount.value);
+                    if (isNaN(baseAmount) || baseAmount <= 0) {
+                        alert('Base Amount must be a number greater than 0.');
+                        return;
+                    }
+                    newItem.baseAmount = baseAmount;
+                }
+                
+                this.data.masterList.push(newItem);
+                this.saveData();
+                this.hideAddItemModal();
+                this.renderRecordList(); // Re-render list with new item
+            },
+
+            /**
+             * Handles '+' or '-' clicks to update item quantity for the selected date
+             */
+            updateItemQuantity(name, action) {
+                const date = this.state.selectedDate;
+                
+                // Get or create the log for the selected date
+                if (!this.data.dailyLog[date]) {
+                    this.data.dailyLog[date] = [];
+                }
+                let dayLog = this.data.dailyLog[date];
+                
+                // Find the item in that day's log
+                let itemInLog = dayLog.find(item => item.name === name);
+                
+                // Find master item to determine increment
+                const masterItem = this.data.masterList.find(item => item.name === name);
+                if (!masterItem) return; // Should not happen
+                
+                const increment = (masterItem.type === 'amount') ? this.constants.AMOUNT_INCREMENT : this.constants.UNIT_INCREMENT;
+
+                if (action === 'plus') {
+                    if (itemInLog) {
+                        itemInLog.quantity += increment;
+                    } else {
+                        // Add new item to log for that day
+                        dayLog.push({ name: name, quantity: increment });
+                    }
+                } else if (action === 'minus') {
+                    if (itemInLog) {
+                        itemInLog.quantity -= increment;
+                        // If quantity is less than 0, set to 0
+                        if (itemInLog.quantity < 0) {
+                            itemInLog.quantity = 0;
+                        }
+                        // If quantity IS 0, remove it from the log
+                        if (itemInLog.quantity === 0) {
+                            this.data.dailyLog[date] = dayLog.filter(item => item.name !== name);
+                        }
+                    }
+                    // Do nothing if quantity is already 0
+                }
+
+                // Clean up: if a day's log is now empty, remove the date key
+                if (this.data.dailyLog[date] && this.data.dailyLog[date].length === 0) {
+                    delete this.data.dailyLog[date];
+                }
+
+                this.saveData();
+                this.renderRecordList(); // Re-render to show new quantity
+            },
+
+            // --- RENDERING ---
+
+            /**
+             * Main render function, controls tabs and modals
+             */
+            render() {
+                // Render Tabs
+                if (this.state.activeTab === 'log') {
+                    this.elements.tabLog.className = 'w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2 border-indigo-500 text-indigo-600';
+                    this.elements.tabRecord.className = 'w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
+                    this.elements.contentLog.classList.remove('hidden');
+                    this.elements.contentRecord.classList.add('hidden');
+                    this.renderLogTable(); // Render log data
+                } else {
+                    this.elements.tabLog.className = 'w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
+                    this.elements.tabRecord.className = 'w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2 border-indigo-500 text-indigo-600';
+                    this.elements.contentLog.classList.add('hidden');
+                    this.elements.contentRecord.classList.remove('hidden');
+                    this.renderRecordList(); // Render food list
+                }
+
+                // Render Modals
+                this.renderModals();
+            },
+            
+            /**
+             * Renders the "Daily Log" summary table
+             */
+            renderLogTable() {
+                this.elements.logTableBody.innerHTML = '';
+                
+                // Get all dates from log, sort them descending (most recent first)
+                const dates = Object.keys(this.data.dailyLog).sort().reverse();
+
+                if (dates.length === 0) {
+                    this.elements.logEmptyState.classList.remove('hidden');
+                    return;
+                }
+                
+                this.elements.logEmptyState.classList.add('hidden');
+                
+                dates.forEach(date => {
+                    const dayLog = this.data.dailyLog[date];
+                    const totals = this.calculateDayTotals(dayLog);
+                    
+                    // Format date for display
+                    const dateObj = new Date(date + 'T00:00:00'); // Fix for timezone issues
+                    const displayDate = dateObj.toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+
+                    const row = document.createElement('tr');
+                    row.className = 'cursor-pointer hover:bg-gray-50';
+                    row.dataset.date = date; // Store YYYY-MM-DD date
+                    row.innerHTML = `
+                        <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${displayDate}</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${totals.kcal.toFixed(0)} kcal</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${totals.protein.toFixed(1)} g</td>
+                    `;
+                    this.elements.logTableBody.appendChild(row);
+                });
+            },
+
+            /**
+             * Renders the "Record Intake" food list based on search
+             */
+            renderRecordList() {
+                this.elements.foodList.innerHTML = '';
+                const term = this.state.searchTerm;
+                
+                const filteredList = this.data.masterList
+                    .filter(item => item.name.toLowerCase().includes(term))
+                    .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+                
+                // Get current log for the selected date to show current quantities
+                const dayLog = this.data.dailyLog[this.state.selectedDate] || [];
+
+                if (filteredList.length === 0 && term === '') {
+                     this.elements.foodList.innerHTML = `<p class="text-center text-gray-500 py-10">Your food list is empty. Add items using the search bar.</p>`;
+                }
+
+                filteredList.forEach(item => {
+                    const itemInLog = dayLog.find(logItem => logItem.name === item.name);
+                    const quantity = itemInLog ? itemInLog.quantity : 0;
+                    
+                    let description = '';
+                    if (item.type === 'unit') {
+                        description = `${item.kcal} kcal, ${item.protein}g / ${item.unitName}`;
+                    } else { // type is 'amount'
+                        description = `${item.kcal} kcal, ${item.protein}g / ${item.baseAmount}${item.unitName}`;
+                    }
+
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'rounded-lg border border-gray-200 bg-white p-3';
+                    itemEl.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium text-gray-900">${item.name}</p>
+                                <p class="text-sm text-gray-500">${description}</p>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button data-name="${item.name}" data-action="minus" class="w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold hover:bg-red-200 disabled:opacity-50" ${quantity === 0 ? 'disabled' : ''}>-</button>
+                                <span class="text-lg font-medium w-8 text-center">${quantity}</span>
+                                <button data-name="${item.name}" data-action="plus" class="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold hover:bg-green-200">+</button>
+                            </div>
+                        </div>
+                    `;
+                    this.elements.foodList.appendChild(itemEl);
+                });
+                
+                // Show "Add new" button if search has text but no results
+                if (term.length > 0 && filteredList.length === 0) {
+                    this.elements.addBtnNamePreview.textContent = term;
+                    this.elements.addBtnContainer.classList.remove('hidden');
+                } else {
+                    this.elements.addBtnContainer.classList.add('hidden');
+                }
+            },
+            
+            /**
+             * Renders (shows/hides) all modals based on state
+             */
+            renderModals() {
+                // Add Item Modal
+                if (this.state.modals.addItemOpen) {
+                    this.elements.modalAddItem.classList.remove('hidden');
+                } else {
+                    this.elements.modalAddItem.classList.add('hidden');
+                }
+
+                // Log Detail Modal
+                if (this.state.modals.logDetailOpen && this.state.selectedLogDate) {
+                    this.renderLogDetailModalContent();
+                    this.elements.modalLogDetail.classList.remove('hidden');
+                } else {
+                    this.elements.modalLogDetail.classList.add('hidden');
+                }
+            },
+
+            /**
+             * Renders the *content* of the Log Detail modal
+             */
+            renderLogDetailModalContent() {
+                const date = this.state.selectedLogDate;
+                if (!date) return;
+                
+                const dayLog = this.data.dailyLog[date] || [];
+                const totals = this.calculateDayTotals(dayLog);
+
+                // Format date
+                const dateObj = new Date(date + 'T00:00:00');
+                const displayDate = dateObj.toLocaleDateString(undefined, {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                
+                this.elements.modalDetailDate.textContent = displayDate;
+                this.elements.modalDetailList.innerHTML = '';
+                
+                if (dayLog.length === 0) {
+                     this.elements.modalDetailList.innerHTML = `<li class="py-3 text-sm text-gray-500">No items were logged on this day.</li>`;
+                }
+
+                dayLog.forEach(logItem => {
+                    const masterItem = this.data.masterList.find(i => i.name === logItem.name);
+                    if (!masterItem) return; // Item deleted from master, skip
+
+                    let itemKcal = 0;
+                    let itemProtein = 0;
+                    let unitLabel = '';
+
+                    if (masterItem.type === 'unit') {
+                        itemKcal = masterItem.kcal * logItem.quantity;
+                        itemProtein = masterItem.protein * logItem.quantity;
+                        // Handle pluralization (e.g., 1 piece, 2 pieces, 0 pieces)
+                        unitLabel = (logItem.quantity === 1) ? masterItem.unitName : (masterItem.unitName + 's');
+                    } else { // type is 'amount'
+                        const perUnitKcal = masterItem.kcal / masterItem.baseAmount;
+                        const perUnitProtein = masterItem.protein / masterItem.baseAmount;
+                        itemKcal = perUnitKcal * logItem.quantity;
+                        itemProtein = perUnitProtein * logItem.quantity;
+                        unitLabel = masterItem.unitName;
+                    }
+
+                    const li = document.createElement('li');
+                    li.className = 'py-3 flex justify-between text-sm';
+                    li.innerHTML = `
+                        <span class="font-medium text-gray-800">${logItem.name} (${logItem.quantity} ${unitLabel})</span>
+                        <span class="text-gray-500">${itemKcal.toFixed(0)} kcal, ${itemProtein.toFixed(1)}g protein</span>
+                    `;
+                    this.elements.modalDetailList.appendChild(li);
+                });
+
+                // Set totals
+                this.elements.modalDetailTotals.textContent = `${totals.kcal.toFixed(0)} kcal, ${totals.protein.toFixed(1)}g protein`;
+            },
+
+            // --- HELPERS ---
+            /**
+             * Calculates total kcal and protein for a given day's log
+             * @param {Array} dayLog - Array of {name, quantity} objects
+             * @returns {Object} - { kcal, protein }
+             */
+            calculateDayTotals(dayLog) {
+                let totalKcal = 0;
+                let totalProtein = 0;
+
+                dayLog.forEach(logItem => {
+                    const masterItem = this.data.masterList.find(i => i.name === logItem.name);
+                    if (masterItem) {
+                        if (masterItem.type === 'unit') {
+                            totalKcal += masterItem.kcal * logItem.quantity;
+                            totalProtein += masterItem.protein * logItem.quantity;
+                        } else { // type is 'amount'
+                            const perUnitKcal = masterItem.kcal / masterItem.baseAmount;
+                            const perUnitProtein = masterItem.protein / masterItem.baseAmount;
+                            totalKcal += perUnitKcal * logItem.quantity;
+                            totalProtein += perUnitProtein * logItem.quantity;
+                        }
+                    }
+                });
+
+                return { kcal: totalKcal, protein: totalProtein };
+            },
+        };
+
+        // Start the application once the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
+    </script>
+</body>
+</html>
+
