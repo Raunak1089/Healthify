@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Healthifier - Daily Log</title>
-    <link rel="icon" sizes="192x192" href="https://www.pngfind.com/pngs/m/85-858511_health-icon-hd-png-download.png">
+    <link rel="icon" sizes="192x192" href="https://www.pngfind.com/pngs/m/85-858511_health-icon-hd-png-download.png" onerror="this.src='https://placehold.co/192x192/000000/FFFFFF?text=H'">
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Inter font -->
@@ -110,7 +110,7 @@
                     </div>
                     <input type="search" name="search" id="search-bar"
                         class="block w-full rounded-md border-gray-300 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3"
-                        placeholder="Search food items...">
+                        placeholder="Search or add food items...">
                 </div>
             </div>
 
@@ -131,12 +131,13 @@
     </div>
 
     <!-- ======================== -->
-    <!-- Modal 1: Add New Item    -->
+    <!-- Modal 1: Add/Edit Item   -->
     <!-- ======================== -->
     <div id="modal-add-item" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-medium text-gray-900">Add New Food Item</h2>
+                <!-- CHANGED: Title now has an ID -->
+                <h2 id="modal-add-title" class="text-lg font-medium text-gray-900">Add New Food Item</h2>
                 <button id="btn-close-add-modal" class="text-gray-400 hover:text-gray-600">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -144,10 +145,10 @@
             <form id="form-add-item" class="space-y-4">
                 <div>
                     <label for="new-name" class="block text-sm font-medium text-gray-700">Food Name</label>
-                    <input type="text" id="new-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    <input type="text" id="new-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 read-only:bg-gray-100 read-only:cursor-not-allowed">
                 </div>
                 
-                <!-- NEW: Type Selector -->
+                <!-- Type Selector -->
                 <fieldset>
                     <legend class="block text-sm font-medium text-gray-700">Quantity Type</legend>
                     <div class="mt-1 flex gap-4">
@@ -162,7 +163,7 @@
                     </div>
                 </fieldset>
                 
-                <!-- NEW: Amount field (conditionally hidden) -->
+                <!-- Amount field (conditionally hidden) -->
                 <div id="amount-input-container" class="hidden">
                     <label for="new-base-amount" class="block text-sm font-medium text-gray-700">Base Amount</label>
                     <input type="number" id="new-base-amount" min="0" step="0.1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="100">
@@ -180,9 +181,17 @@
                     <label for="new-unit-name" class="block text-sm font-medium text-gray-700">Unit Name</label>
                     <input type="text" id="new-unit-name" required placeholder="piece" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
                 </div>
-                <button type="submit"
+                
+                <!-- CHANGED: Save button now has an ID -->
+                <button type="submit" id="modal-add-save-btn"
                     class="w-full flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
                     Save Item
+                </button>
+                
+                <!-- NEW: Delete button -->
+                <button type="button" id="btn-delete-item"
+                    class="w-full flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 hidden mt-2">
+                    Delete Item
                 </button>
             </form>
         </div>
@@ -227,6 +236,7 @@
                     logDetailOpen: false,
                 },
                 selectedLogDate: null, // Date for the detail modal
+                editingItemName: null, // NEW: Tracks item being edited
             },
 
             // --- DATA ---
@@ -282,6 +292,10 @@
                 this.elements.labelNewProtein = document.getElementById('label-new-protein');
                 this.elements.inputNewProtein = document.getElementById('new-protein');
                 this.elements.inputNewUnitName = document.getElementById('new-unit-name');
+                // NEW: Modal buttons
+                this.elements.modalAddTitle = document.getElementById('modal-add-title');
+                this.elements.modalAddSaveBtn = document.getElementById('modal-add-save-btn');
+                this.elements.btnDeleteItem = document.getElementById('btn-delete-item');
                 
                 // Log Detail Modal
                 this.elements.modalLogDetail = document.getElementById('modal-log-details');
@@ -317,19 +331,28 @@
                 // Add Item Modal listeners
                 this.elements.addBtnShow.addEventListener('click', () => this.showAddItemModal());
                 this.elements.btnCloseAddModal.addEventListener('click', () => this.hideAddItemModal());
-                this.elements.formAddItem.addEventListener('submit', (e) => this.handleSaveNewItem(e));
+                this.elements.formAddItem.addEventListener('submit', (e) => this.handleSaveItem(e));
                 this.elements.radioTypeUnit.addEventListener('change', () => this.handleTypeChange());
                 this.elements.radioTypeAmount.addEventListener('change', () => this.handleTypeChange());
+                // NEW: Delete button listener
+                this.elements.btnDeleteItem.addEventListener('click', () => this.handleDeleteItem());
 
 
                 // Quantity buttons (using event delegation)
+                // UPDATED: Now handles 'plus', 'minus', and 'edit'
                 this.elements.foodList.addEventListener('click', (e) => {
                     const btn = e.target.closest('button[data-name]');
                     if (!btn) return;
                     
                     const name = btn.dataset.name;
-                    const action = btn.dataset.action; // 'plus' or 'minus'
-                    this.updateItemQuantity(name, action);
+                    const action = btn.dataset.action; // 'plus', 'minus', or 'edit'
+                    
+                    if (action === 'plus' || action === 'minus') {
+                        this.updateItemQuantity(name, action);
+                    } else if (action === 'edit') {
+                        this.state.editingItemName = name;
+                        this.showAddItemModal();
+                    }
                 });
 
                 // Log Detail Modal listeners
@@ -375,6 +398,8 @@
             },
 
             saveData() {
+                // Sort master list alphabetically before saving
+                this.data.masterList.sort((a, b) => a.name.localeCompare(b.name));
                 localStorage.setItem(this.keys.master, JSON.stringify(this.data.masterList));
                 localStorage.setItem(this.keys.log, JSON.stringify(this.data.dailyLog));
             },
@@ -412,19 +437,73 @@
                 }
             },
 
+            /**
+             * UPDATED: Shows Add/Edit modal.
+             * If app.state.editingItemName is set, it fills in data for editing.
+             * Otherwise, it prepares for adding a new item.
+             */
             showAddItemModal() {
                 this.state.modals.addItemOpen = true;
-                // Pre-fill name from search bar
-                this.elements.inputNewName.value = this.state.searchTerm;
-                // Reset form to default "unit" state
-                this.elements.radioTypeUnit.checked = true;
-                this.handleTypeChange();
+                const editName = this.state.editingItemName;
+                
+                if (editName) {
+                    // --- EDIT MODE ---
+                    const item = this.data.masterList.find(i => i.name === editName);
+                    if (!item) {
+                        console.error("Item to edit not found:", editName);
+                        this.hideAddItemModal();
+                        return;
+                    }
+
+                    this.elements.modalAddTitle.textContent = 'Edit Food Item';
+                    this.elements.modalAddSaveBtn.textContent = 'Update Item';
+                    this.elements.btnDeleteItem.classList.remove('hidden');
+
+                    this.elements.inputNewName.value = item.name;
+                    this.elements.inputNewName.readOnly = true; // Make name non-editable
+                    this.elements.inputNewName.classList.add('read-only:bg-gray-100');
+
+                    this.elements.inputNewKcal.value = item.kcal;
+                    this.elements.inputNewProtein.value = item.protein;
+                    this.elements.inputNewUnitName.value = item.unitName;
+                    
+                    if (item.type === 'unit') {
+                        this.elements.radioTypeUnit.checked = true;
+                    } else {
+                        this.elements.radioTypeAmount.checked = true;
+                        this.elements.inputNewBaseAmount.value = item.baseAmount;
+                    }
+
+                } else {
+                    // --- ADD MODE ---
+                    this.elements.modalAddTitle.textContent = 'Add New Food Item';
+                    this.elements.modalAddSaveBtn.textContent = 'Save Item';
+                    this.elements.btnDeleteItem.classList.add('hidden');
+
+                    this.elements.inputNewName.value = this.state.searchTerm; // Pre-fill from search
+                    this.elements.inputNewName.readOnly = false;
+                    this.elements.inputNewName.classList.remove('read-only:bg-gray-100');
+                    
+                    // Reset other fields
+                    this.elements.formAddItem.reset();
+                }
+
+                this.handleTypeChange(); // Ensure correct fields are shown
                 this.renderModals();
             },
 
+            /**
+             * UPDATED: Hides Add/Edit modal and resets editing state.
+             */
             hideAddItemModal() {
                 this.state.modals.addItemOpen = false;
+                this.state.editingItemName = null; // Reset editing state
                 this.elements.formAddItem.reset();
+                
+                // Ensure name field is re-enabled
+                this.elements.inputNewName.readOnly = false;
+                this.elements.inputNewName.classList.remove('read-only:bg-gray-100');
+                
                 this.handleTypeChange(); // Ensure UI is reset
                 this.renderModals();
             },
@@ -443,10 +522,11 @@
             // --- CORE LOGIC ---
             
             /**
-             * Handles saving a new item to the master list
+             * UPDATED: Handles both saving a new item and updating an existing one
              */
-            handleSaveNewItem(event) {
+            handleSaveItem(event) {
                 event.preventDefault();
+                
                 const name = this.elements.inputNewName.value.trim();
                 const kcal = parseFloat(this.elements.inputNewKcal.value);
                 const protein = parseFloat(this.elements.inputNewProtein.value);
@@ -454,31 +534,75 @@
                 const type = this.elements.radioTypeUnit.checked ? 'unit' : 'amount';
                 
                 if (!name || isNaN(kcal) || isNaN(protein)) {
-                     alert('Please fill out all required fields with valid numbers.');
+                     // In a real app, we'd use a modal, but this follows the original's pattern
+                     console.warn('Invalid form data');
                      return;
                 }
 
-                // Check for duplicates
-                if (this.data.masterList.find(item => item.name.toLowerCase() === name.toLowerCase())) {
-                    alert('An item with this name already exists.');
-                    return;
-                }
+                const newItemData = { name, kcal, protein, unitName, type };
                 
-                const newItem = { name, kcal, protein, unitName, type };
-
                 if (type === 'amount') {
                     const baseAmount = parseFloat(this.elements.inputNewBaseAmount.value);
                     if (isNaN(baseAmount) || baseAmount <= 0) {
-                        alert('Base Amount must be a number greater than 0.');
+                        console.warn('Invalid base amount');
                         return;
                     }
-                    newItem.baseAmount = baseAmount;
+                    newItemData.baseAmount = baseAmount;
+                }
+
+                if (this.state.editingItemName) {
+                    // --- UPDATE LOGIC ---
+                    const itemIndex = this.data.masterList.findIndex(i => i.name === this.state.editingItemName);
+                    if (itemIndex > -1) {
+                        // Update item in master list
+                        this.data.masterList[itemIndex] = newItemData;
+                    }
+                } else {
+                    // --- ADD NEW LOGIC ---
+                    // Check for duplicates
+                    if (this.data.masterList.find(item => item.name.toLowerCase() === name.toLowerCase())) {
+                        console.warn('Duplicate item name');
+                        return;
+                    }
+                    this.data.masterList.push(newItemData);
                 }
                 
-                this.data.masterList.push(newItem);
                 this.saveData();
                 this.hideAddItemModal();
-                this.renderRecordList(); // Re-render list with new item
+                this.renderRecordList(); // Re-render list
+                
+                // Re-render log table in case totals changed (if an item was edited)
+                this.renderLogTable();
+            },
+
+            /**
+             * NEW: Handles deleting an item from the master list and all logs
+             */
+            handleDeleteItem() {
+                const nameToDelete = this.state.editingItemName;
+                if (!nameToDelete) return;
+
+                // NOTE: A real app should use a custom confirmation modal here
+                // instead of window.confirm(), but for simplicity, we proceed.
+
+                // 1. Remove from masterList
+                this.data.masterList = this.data.masterList.filter(item => item.name !== nameToDelete);
+
+                // 2. Remove from all daily logs
+                Object.keys(this.data.dailyLog).forEach(date => {
+                    this.data.dailyLog[date] = this.data.dailyLog[date].filter(logItem => logItem.name !== nameToDelete);
+                    // Clean up empty log days
+                    if (this.data.dailyLog[date].length === 0) {
+                        delete this.data.dailyLog[date];
+                    }
+                });
+
+                this.saveData();
+                this.hideAddItemModal();
+                this.renderRecordList(); // Re-render food list
+                
+                // Also re-render log table in case a deleted item changes totals
+                this.renderLogTable(); 
             },
 
             /**
@@ -505,6 +629,8 @@
                 if (action === 'plus') {
                     if (itemInLog) {
                         itemInLog.quantity += increment;
+                        // Round to avoid floating point issues (e.g., 0.1 + 0.2)
+                        itemInLog.quantity = parseFloat(itemInLog.quantity.toFixed(2));
                     } else {
                         // Add new item to log for that day
                         dayLog.push({ name: name, quantity: increment });
@@ -512,16 +638,14 @@
                 } else if (action === 'minus') {
                     if (itemInLog) {
                         itemInLog.quantity -= increment;
-                        // If quantity is less than 0, set to 0
-                        if (itemInLog.quantity < 0) {
-                            itemInLog.quantity = 0;
-                        }
-                        // If quantity IS 0, remove it from the log
-                        if (itemInLog.quantity === 0) {
+                        itemInLog.quantity = parseFloat(itemInLog.quantity.toFixed(2));
+                        
+                        // If quantity is less than or equal to 0, remove it
+                        if (itemInLog.quantity <= 0) {
                             this.data.dailyLog[date] = dayLog.filter(item => item.name !== name);
                         }
                     }
-                    // Do nothing if quantity is already 0
+                    // Do nothing if it's not in the log
                 }
 
                 // Clean up: if a day's log is now empty, remove the date key
@@ -605,9 +729,9 @@
                 this.elements.foodList.innerHTML = '';
                 const term = this.state.searchTerm;
                 
+                // Use the already-sorted masterList, just filter it
                 const filteredList = this.data.masterList
-                    .filter(item => item.name.toLowerCase().includes(term))
-                    .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+                    .filter(item => item.name.toLowerCase().includes(term));
                 
                 // Get current log for the selected date to show current quantities
                 const dayLog = this.data.dailyLog[this.state.selectedDate] || [];
@@ -629,13 +753,20 @@
 
                     const itemEl = document.createElement('div');
                     itemEl.className = 'rounded-lg border border-gray-200 bg-white p-3';
+                    
+                    // NEW: Added edit button next to name
                     itemEl.innerHTML = `
                         <div class="flex justify-between items-center">
-                            <div>
-                                <p class="font-medium text-gray-900">${item.name}</p>
+                            <div class="flex-1 min-w-0"> <!-- Added flex-1 and min-w-0 to allow text to truncate -->
+                                <div class="flex items-center gap-2">
+                                    <p class="font-medium text-gray-900 truncate" title="${item.name}">${item.name}</p>
+                                    <button data-name="${item.name}" data-action="edit" class="text-gray-400 hover:text-indigo-600 flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                </div>
                                 <p class="text-sm text-gray-500">${description}</p>
                             </div>
-                            <div class="flex items-center gap-2 flex-shrink-0">
+                            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                                 <button data-name="${item.name}" data-action="minus" class="w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold hover:bg-red-200 disabled:opacity-50" ${quantity === 0 ? 'disabled' : ''}>-</button>
                                 <span class="text-lg font-medium w-8 text-center">${quantity}</span>
                                 <button data-name="${item.name}" data-action="plus" class="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold hover:bg-green-200">+</button>
@@ -699,9 +830,23 @@
                      this.elements.modalDetailList.innerHTML = `<li class="py-3 text-sm text-gray-500">No items were logged on this day.</li>`;
                 }
 
-                dayLog.forEach(logItem => {
+                // Sort items in log for display
+                const sortedDayLog = [...dayLog].sort((a,b) => a.name.localeCompare(b.name));
+
+                sortedDayLog.forEach(logItem => {
                     const masterItem = this.data.masterList.find(i => i.name === logItem.name);
-                    if (!masterItem) return; // Item deleted from master, skip
+                    
+                    // NEW: Check if item was deleted from master list
+                    if (!masterItem) {
+                        const li = document.createElement('li');
+li.className = 'py-3 flex justify-between text-sm italic';
+li.innerHTML = `
+    <span class="font-medium text-gray-500">${logItem.name} (deleted)</span>
+    <span class="text-gray-400">0 kcal, 0.0g protein</span>
+`;
+this.elements.modalDetailList.appendChild(li);
+                        return; // Skip calculation
+                    }
 
                     let itemKcal = 0;
                     let itemProtein = 0;
@@ -756,6 +901,7 @@
                             totalProtein += perUnitProtein * logItem.quantity;
                         }
                     }
+                    // If masterItem is not found (deleted), it correctly adds 0
                 });
 
                 return { kcal: totalKcal, protein: totalProtein };
