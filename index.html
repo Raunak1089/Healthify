@@ -6,7 +6,7 @@
     <title>Healthifier - Daily Log</title>
     <link rel="icon" sizes="192x192" href="https://www.pngfind.com/pngs/m/85-858511_health-icon-hd-png-download.png">
     <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https.cdn.tailwindcss.com"></script>
     <!-- Load Inter font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -131,12 +131,12 @@
     </div>
 
     <!-- ======================== -->
-    <!-- Modal 1: Add New Item    -->
+    <!-- Modal 1: Add/Edit Item   -->
     <!-- ======================== -->
     <div id="modal-add-item" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-medium text-gray-900">Add New Food Item</h2>
+                <h2 id="modal-add-item-title" class="text-lg font-medium text-gray-900">Add New Food Item</h2>
                 <button id="btn-close-add-modal" class="text-gray-400 hover:text-gray-600">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -144,10 +144,11 @@
             <form id="form-add-item" class="space-y-4">
                 <div>
                     <label for="new-name" class="block text-sm font-medium text-gray-700">Food Name</label>
-                    <input type="text" id="new-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    <input type="text" id="new-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 disabled:bg-gray-100 disabled:text-gray-500">
+                    <p id="edit-name-warning" class="hidden text-xs text-gray-500 mt-1">Name cannot be changed (it's the item's unique ID).</p>
                 </div>
                 
-                <!-- NEW: Type Selector -->
+                <!-- Type Selector -->
                 <fieldset>
                     <legend class="block text-sm font-medium text-gray-700">Quantity Type</legend>
                     <div class="mt-1 flex gap-4">
@@ -162,7 +163,7 @@
                     </div>
                 </fieldset>
                 
-                <!-- NEW: Amount field (conditionally hidden) -->
+                <!-- Amount field (conditionally hidden) -->
                 <div id="amount-input-container" class="hidden">
                     <label for="new-base-amount" class="block text-sm font-medium text-gray-700">Base Amount</label>
                     <input type="number" id="new-base-amount" min="0" step="0.1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" placeholder="100">
@@ -180,10 +181,18 @@
                     <label for="new-unit-name" class="block text-sm font-medium text-gray-700">Unit Name</label>
                     <input type="text" id="new-unit-name" required placeholder="piece" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
                 </div>
-                <button type="submit"
-                    class="w-full flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
-                    Save Item
-                </button>
+                
+                <!-- Button Container -->
+                <div class="pt-2 space-y-3">
+                    <button id="btn-save-item" type="submit"
+                        class="w-full flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
+                        Save Item
+                    </button>
+                    <button id="btn-delete-item" type="button" data-delete-state="initial"
+                        class="w-full flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-red-600 shadow-sm hover:bg-red-50 hidden">
+                        Delete Item
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -227,6 +236,7 @@
                     logDetailOpen: false,
                 },
                 selectedLogDate: null, // Date for the detail modal
+                modalEditName: null, // Name of item being edited, null if in 'add' mode
             },
 
             // --- DATA ---
@@ -270,9 +280,11 @@
 
                 // Add Item Modal
                 this.elements.modalAddItem = document.getElementById('modal-add-item');
+                this.elements.modalAddItemTitle = document.getElementById('modal-add-item-title');
                 this.elements.btnCloseAddModal = document.getElementById('btn-close-add-modal');
                 this.elements.formAddItem = document.getElementById('form-add-item');
                 this.elements.inputNewName = document.getElementById('new-name');
+                this.elements.editNameWarning = document.getElementById('edit-name-warning');
                 this.elements.radioTypeUnit = document.getElementById('type-unit');
                 this.elements.radioTypeAmount = document.getElementById('type-amount');
                 this.elements.amountInputContainer = document.getElementById('amount-input-container');
@@ -282,6 +294,8 @@
                 this.elements.labelNewProtein = document.getElementById('label-new-protein');
                 this.elements.inputNewProtein = document.getElementById('new-protein');
                 this.elements.inputNewUnitName = document.getElementById('new-unit-name');
+                this.elements.btnSaveItem = document.getElementById('btn-save-item');
+                this.elements.btnDeleteItem = document.getElementById('btn-delete-item');
                 
                 // Log Detail Modal
                 this.elements.modalLogDetail = document.getElementById('modal-log-details');
@@ -320,16 +334,27 @@
                 this.elements.formAddItem.addEventListener('submit', (e) => this.handleSaveNewItem(e));
                 this.elements.radioTypeUnit.addEventListener('change', () => this.handleTypeChange());
                 this.elements.radioTypeAmount.addEventListener('change', () => this.handleTypeChange());
+                this.elements.btnDeleteItem.addEventListener('click', () => this.handleDeleteItem());
 
 
-                // Quantity buttons (using event delegation)
+                // Event delegation for food list
                 this.elements.foodList.addEventListener('click', (e) => {
-                    const btn = e.target.closest('button[data-name]');
-                    if (!btn) return;
-                    
-                    const name = btn.dataset.name;
-                    const action = btn.dataset.action; // 'plus' or 'minus'
-                    this.updateItemQuantity(name, action);
+                    // Quantity buttons
+                    const btnQuantity = e.target.closest('button[data-action]');
+                    if (btnQuantity) {
+                        const name = btnQuantity.dataset.name;
+                        const action = btnQuantity.dataset.action;
+                        this.updateItemQuantity(name, action);
+                        return; // Stop further processing
+                    }
+
+                    // Edit button
+                    const btnEdit = e.target.closest('button[data-edit-name]');
+                    if (btnEdit) {
+                        const name = btnEdit.dataset.editName;
+                        this.showAddItemModal(name); // Pass name to open in edit mode
+                        return;
+                    }
                 });
 
                 // Log Detail Modal listeners
@@ -351,26 +376,25 @@
                 let masterList = master ? JSON.parse(master) : [];
                 
                 // --- MIGRATION ---
-                // Check for old data structure and migrate it
                 masterList = masterList.map(item => {
-                    if (!item.type) { // Old data if 'type' doesn't exist
+                    if (!item.type) { 
                         needsSave = true;
                         return {
                             name: item.name,
-                            type: 'unit', // Assume all old data was 'unit'
+                            type: 'unit', 
                             kcal: item.kcal,
                             protein: item.protein,
-                            unitName: item.unit || 'unit' // Use old 'unit' field
+                            unitName: item.unit || 'unit'
                         };
                     }
-                    return item; // Item is already new, return as-is
+                    return item; 
                 });
 
                 this.data.masterList = masterList;
                 this.data.dailyLog = log ? JSON.parse(log) : {};
 
                 if (needsSave) {
-                    this.saveData(); // Save the migrated data
+                    this.saveData(); 
                 }
             },
 
@@ -387,17 +411,14 @@
 
             handleDateChange(date) {
                 this.state.selectedDate = date;
-                this.renderRecordList(); // Only re-render the food list
+                this.renderRecordList();
             },
 
             handleSearch(term) {
                 this.state.searchTerm = term.toLowerCase();
-                this.renderRecordList(); // Only re-render the food list
+                this.renderRecordList();
             },
 
-            /**
-             * Handles radio button change in Add Item modal
-             */
             handleTypeChange() {
                 if (this.elements.radioTypeUnit.checked) {
                     this.elements.amountInputContainer.classList.add('hidden');
@@ -412,18 +433,55 @@
                 }
             },
 
-            showAddItemModal() {
-                this.state.modals.addItemOpen = true;
-                // Pre-fill name from search bar
-                this.elements.inputNewName.value = this.state.searchTerm;
-                // Reset form to default "unit" state
-                this.elements.radioTypeUnit.checked = true;
-                this.handleTypeChange();
+            /**
+             * Shows the Add/Edit modal.
+             * @param {string | null} itemName - The name of the item to edit, or null to add.
+             */
+            showAddItemModal(itemName = null) {
+                this.state.modalEditName = itemName;
+                this.elements.formAddItem.reset(); // Clear form
+                this.resetDeleteButton();
+
+                if (itemName) {
+                    // --- EDIT MODE ---
+                    this.state.modals.addItemOpen = true;
+                    this.elements.modalAddItemTitle.textContent = 'Edit Food Item';
+                    this.elements.inputNewName.disabled = true;
+                    this.elements.editNameWarning.classList.remove('hidden');
+                    this.elements.btnSaveItem.textContent = 'Save Changes';
+                    this.elements.btnDeleteItem.classList.remove('hidden');
+
+                    // Populate form with existing data
+                    const item = this.data.masterList.find(i => i.name === itemName);
+                    if (item) {
+                        this.elements.inputNewName.value = item.name;
+                        this.elements.radioTypeUnit.checked = item.type === 'unit';
+                        this.elements.radioTypeAmount.checked = item.type === 'amount';
+                        this.elements.inputNewKcal.value = item.kcal;
+                        this.elements.inputNewProtein.value = item.protein;
+                        this.elements.inputNewUnitName.value = item.unitName;
+                        if (item.type === 'amount') {
+                            this.elements.inputNewBaseAmount.value = item.baseAmount;
+                        }
+                    }
+                } else {
+                    // --- ADD MODE ---
+                    this.state.modals.addItemOpen = true;
+                    this.elements.modalAddItemTitle.textContent = 'Add New Food Item';
+                    this.elements.inputNewName.disabled = false;
+                    this.elements.editNameWarning.classList.add('hidden');
+                    this.elements.inputNewName.value = this.state.searchTerm; // Pre-fill from search
+                    this.elements.btnSaveItem.textContent = 'Save Item';
+                    this.elements.btnDeleteItem.classList.add('hidden');
+                }
+                
+                this.handleTypeChange(); // Ensure UI matches radio buttons
                 this.renderModals();
             },
 
             hideAddItemModal() {
                 this.state.modals.addItemOpen = false;
+                this.state.modalEditName = null; // Clear edit state
                 this.elements.formAddItem.reset();
                 this.handleTypeChange(); // Ensure UI is reset
                 this.renderModals();
@@ -440,11 +498,15 @@
                 this.renderModals();
             },
 
+            resetDeleteButton() {
+                this.elements.btnDeleteItem.textContent = 'Delete Item';
+                this.elements.btnDeleteItem.dataset.deleteState = 'initial';
+                this.elements.btnDeleteItem.classList.remove('bg-red-600', 'text-white');
+                this.elements.btnDeleteItem.classList.add('bg-white', 'text-red-600');
+            },
+
             // --- CORE LOGIC ---
             
-            /**
-             * Handles saving a new item to the master list
-             */
             handleSaveNewItem(event) {
                 event.preventDefault();
                 const name = this.elements.inputNewName.value.trim();
@@ -454,17 +516,20 @@
                 const type = this.elements.radioTypeUnit.checked ? 'unit' : 'amount';
                 
                 if (!name || isNaN(kcal) || isNaN(protein)) {
-                     alert('Please fill out all required fields with valid numbers.');
+                     // Simple validation, no alert()
+                     console.error("Invalid form data");
                      return;
                 }
 
-                // Check for duplicates
-                if (this.data.masterList.find(item => item.name.toLowerCase() === name.toLowerCase())) {
-                    alert('An item with this name already exists.');
-                    return;
+                // Check for duplicates ONLY if in ADD mode
+                if (!this.state.modalEditName) {
+                    if (this.data.masterList.find(item => item.name.toLowerCase() === name.toLowerCase())) {
+                        alert('An item with this name already exists.'); // Using alert as a temp fix
+                        return;
+                    }
                 }
                 
-                const newItem = { name, kcal, protein, unitName, type };
+                const newItemData = { name, kcal, protein, unitName, type };
 
                 if (type === 'amount') {
                     const baseAmount = parseFloat(this.elements.inputNewBaseAmount.value);
@@ -472,33 +537,71 @@
                         alert('Base Amount must be a number greater than 0.');
                         return;
                     }
-                    newItem.baseAmount = baseAmount;
+                    newItemData.baseAmount = baseAmount;
+                }
+
+                if (this.state.modalEditName) {
+                    // --- UPDATE EXISTING ITEM ---
+                    const index = this.data.masterList.findIndex(i => i.name === this.state.modalEditName);
+                    if (index !== -1) {
+                        this.data.masterList[index] = newItemData;
+                    }
+                } else {
+                    // --- ADD NEW ITEM ---
+                    this.data.masterList.push(newItemData);
                 }
                 
-                this.data.masterList.push(newItem);
                 this.saveData();
                 this.hideAddItemModal();
-                this.renderRecordList(); // Re-render list with new item
+                this.renderRecordList(); // Re-render list with new/updated item
             },
 
-            /**
-             * Handles '+' or '-' clicks to update item quantity for the selected date
-             */
+            handleDeleteItem() {
+                const state = this.elements.btnDeleteItem.dataset.deleteState;
+                
+                if (state === 'initial') {
+                    // First click: Ask for confirmation
+                    this.elements.btnDeleteItem.textContent = 'Confirm Delete?';
+                    this.elements.btnDeleteItem.dataset.deleteState = 'confirm';
+                    this.elements.btnDeleteItem.classList.add('bg-red-600', 'text-white');
+                    return;
+                }
+
+                if (state === 'confirm') {
+                    // Second click: Execute delete
+                    const nameToDelete = this.state.modalEditName;
+                    if (!nameToDelete) return;
+
+                    // 1. Delete from master list
+                    this.data.masterList = this.data.masterList.filter(item => item.name !== nameToDelete);
+
+                    // 2. Delete from all daily logs
+                    Object.keys(this.data.dailyLog).forEach(date => {
+                        this.data.dailyLog[date] = this.data.dailyLog[date].filter(logItem => logItem.name !== nameToDelete);
+                        // Clean up empty log days
+                        if (this.data.dailyLog[date].length === 0) {
+                            delete this.data.dailyLog[date];
+                        }
+                    });
+
+                    this.saveData();
+                    this.hideAddItemModal();
+                    this.render(); // Full re-render to update both lists
+                }
+            },
+
             updateItemQuantity(name, action) {
                 const date = this.state.selectedDate;
                 
-                // Get or create the log for the selected date
                 if (!this.data.dailyLog[date]) {
                     this.data.dailyLog[date] = [];
                 }
                 let dayLog = this.data.dailyLog[date];
                 
-                // Find the item in that day's log
                 let itemInLog = dayLog.find(item => item.name === name);
                 
-                // Find master item to determine increment
                 const masterItem = this.data.masterList.find(item => item.name === name);
-                if (!masterItem) return; // Should not happen
+                if (!masterItem) return; 
                 
                 const increment = (masterItem.type === 'amount') ? this.constants.AMOUNT_INCREMENT : this.constants.UNIT_INCREMENT;
 
@@ -506,38 +609,29 @@
                     if (itemInLog) {
                         itemInLog.quantity += increment;
                     } else {
-                        // Add new item to log for that day
                         dayLog.push({ name: name, quantity: increment });
                     }
                 } else if (action === 'minus') {
                     if (itemInLog) {
                         itemInLog.quantity -= increment;
-                        // If quantity is less than 0, set to 0
                         if (itemInLog.quantity < 0) {
                             itemInLog.quantity = 0;
                         }
-                        // If quantity IS 0, remove it from the log
                         if (itemInLog.quantity === 0) {
                             this.data.dailyLog[date] = dayLog.filter(item => item.name !== name);
                         }
                     }
-                    // Do nothing if quantity is already 0
                 }
 
-                // Clean up: if a day's log is now empty, remove the date key
                 if (this.data.dailyLog[date] && this.data.dailyLog[date].length === 0) {
                     delete this.data.dailyLog[date];
                 }
 
                 this.saveData();
-                this.renderRecordList(); // Re-render to show new quantity
+                this.renderRecordList(); 
             },
 
             // --- RENDERING ---
-
-            /**
-             * Main render function, controls tabs and modals
-             */
             render() {
                 // Render Tabs
                 if (this.state.activeTab === 'log') {
@@ -553,18 +647,11 @@
                     this.elements.contentRecord.classList.remove('hidden');
                     this.renderRecordList(); // Render food list
                 }
-
-                // Render Modals
                 this.renderModals();
             },
             
-            /**
-             * Renders the "Daily Log" summary table
-             */
             renderLogTable() {
                 this.elements.logTableBody.innerHTML = '';
-                
-                // Get all dates from log, sort them descending (most recent first)
                 const dates = Object.keys(this.data.dailyLog).sort().reverse();
 
                 if (dates.length === 0) {
@@ -578,8 +665,7 @@
                     const dayLog = this.data.dailyLog[date];
                     const totals = this.calculateDayTotals(dayLog);
                     
-                    // Format date for display
-                    const dateObj = new Date(date + 'T00:00:00'); // Fix for timezone issues
+                    const dateObj = new Date(date + 'T00:00:00'); 
                     const displayDate = dateObj.toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
@@ -588,7 +674,7 @@
 
                     const row = document.createElement('tr');
                     row.className = 'cursor-pointer hover:bg-gray-50';
-                    row.dataset.date = date; // Store YYYY-MM-DD date
+                    row.dataset.date = date; 
                     row.innerHTML = `
                         <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${displayDate}</td>
                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${totals.kcal.toFixed(0)} kcal</td>
@@ -598,18 +684,14 @@
                 });
             },
 
-            /**
-             * Renders the "Record Intake" food list based on search
-             */
             renderRecordList() {
                 this.elements.foodList.innerHTML = '';
                 const term = this.state.searchTerm;
                 
                 const filteredList = this.data.masterList
                     .filter(item => item.name.toLowerCase().includes(term))
-                    .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+                    .sort((a, b) => a.name.localeCompare(b.name));
                 
-                // Get current log for the selected date to show current quantities
                 const dayLog = this.data.dailyLog[this.state.selectedDate] || [];
 
                 if (filteredList.length === 0 && term === '') {
@@ -623,7 +705,7 @@
                     let description = '';
                     if (item.type === 'unit') {
                         description = `${item.kcal} kcal, ${item.protein}g / ${item.unitName}`;
-                    } else { // type is 'amount'
+                    } else { 
                         description = `${item.kcal} kcal, ${item.protein}g / ${item.baseAmount}${item.unitName}`;
                     }
 
@@ -631,10 +713,20 @@
                     itemEl.className = 'rounded-lg border border-gray-200 bg-white p-3';
                     itemEl.innerHTML = `
                         <div class="flex justify-between items-center">
-                            <div>
-                                <p class="font-medium text-gray-900">${item.name}</p>
-                                <p class="text-sm text-gray-500">${description}</p>
+                            <!-- Left Side: Info + Edit -->
+                            <div class="flex items-center gap-2">
+                                <button data-edit-name="${item.name}" class="p-1 text-gray-400 hover:text-indigo-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                </button>
+                                <div>
+                                    <p class="font-medium text-gray-900">${item.name}</p>
+                                    <p class="text-sm text-gray-500">${description}</p>
+                                </div>
                             </div>
+                            <!-- Right Side: Quantity -->
                             <div class="flex items-center gap-2 flex-shrink-0">
                                 <button data-name="${item.name}" data-action="minus" class="w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold hover:bg-red-200 disabled:opacity-50" ${quantity === 0 ? 'disabled' : ''}>-</button>
                                 <span class="text-lg font-medium w-8 text-center">${quantity}</span>
@@ -645,7 +737,6 @@
                     this.elements.foodList.appendChild(itemEl);
                 });
                 
-                // Show "Add new" button if search has text but no results
                 if (term.length > 0 && filteredList.length === 0) {
                     this.elements.addBtnNamePreview.textContent = term;
                     this.elements.addBtnContainer.classList.remove('hidden');
@@ -654,9 +745,6 @@
                 }
             },
             
-            /**
-             * Renders (shows/hides) all modals based on state
-             */
             renderModals() {
                 // Add Item Modal
                 if (this.state.modals.addItemOpen) {
@@ -674,9 +762,6 @@
                 }
             },
 
-            /**
-             * Renders the *content* of the Log Detail modal
-             */
             renderLogDetailModalContent() {
                 const date = this.state.selectedLogDate;
                 if (!date) return;
@@ -684,7 +769,6 @@
                 const dayLog = this.data.dailyLog[date] || [];
                 const totals = this.calculateDayTotals(dayLog);
 
-                // Format date
                 const dateObj = new Date(date + 'T00:00:00');
                 const displayDate = dateObj.toLocaleDateString(undefined, {
                     month: 'long',
@@ -701,7 +785,7 @@
 
                 dayLog.forEach(logItem => {
                     const masterItem = this.data.masterList.find(i => i.name === logItem.name);
-                    if (!masterItem) return; // Item deleted from master, skip
+                    if (!masterItem) return; 
 
                     let itemKcal = 0;
                     let itemProtein = 0;
@@ -710,9 +794,8 @@
                     if (masterItem.type === 'unit') {
                         itemKcal = masterItem.kcal * logItem.quantity;
                         itemProtein = masterItem.protein * logItem.quantity;
-                        // Handle pluralization (e.g., 1 piece, 2 pieces, 0 pieces)
                         unitLabel = (logItem.quantity === 1) ? masterItem.unitName : (masterItem.unitName + 's');
-                    } else { // type is 'amount'
+                    } else { 
                         const perUnitKcal = masterItem.kcal / masterItem.baseAmount;
                         const perUnitProtein = masterItem.protein / masterItem.baseAmount;
                         itemKcal = perUnitKcal * logItem.quantity;
@@ -729,16 +812,10 @@
                     this.elements.modalDetailList.appendChild(li);
                 });
 
-                // Set totals
                 this.elements.modalDetailTotals.textContent = `${totals.kcal.toFixed(0)} kcal, ${totals.protein.toFixed(1)}g protein`;
             },
 
             // --- HELPERS ---
-            /**
-             * Calculates total kcal and protein for a given day's log
-             * @param {Array} dayLog - Array of {name, quantity} objects
-             * @returns {Object} - { kcal, protein }
-             */
             calculateDayTotals(dayLog) {
                 let totalKcal = 0;
                 let totalProtein = 0;
@@ -749,7 +826,7 @@
                         if (masterItem.type === 'unit') {
                             totalKcal += masterItem.kcal * logItem.quantity;
                             totalProtein += masterItem.protein * logItem.quantity;
-                        } else { // type is 'amount'
+                        } else { 
                             const perUnitKcal = masterItem.kcal / masterItem.baseAmount;
                             const perUnitProtein = masterItem.protein / masterItem.baseAmount;
                             totalKcal += perUnitKcal * logItem.quantity;
