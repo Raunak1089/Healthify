@@ -908,13 +908,43 @@ this.elements.modalDetailList.appendChild(li);
             },
         };
 
-        // Start the application once the DOM is fully loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            app.init();
+// Start the application once the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    app.init();
 
-            // A basic list of food items
-            localStorage.setItem('healthifier-masterList', '[{"name":"Banana","kcal":110,"protein":1,"unitName":"piece","type":"unit"},{"name":"Chana","kcal":102,"protein":8,"unitName":"g","type":"amount","baseAmount":100},{"name":"Chicken","kcal":165,"protein":29,"unitName":"g","type":"amount","baseAmount":100},{"name":"Chola (boiled)","kcal":130,"protein":9,"unitName":"g","type":"amount","baseAmount":100},{"name":"Chola (raw)","kcal":130,"protein":19,"unitName":"g","type":"amount","baseAmount":100},{"name":"Dahi","kcal":80,"protein":4,"unitName":"g","type":"amount","baseAmount":100},{"name":"Dahi (misti)","kcal":175,"protein":4,"unitName":"g","type":"amount","baseAmount":100},{"name":"Dal","kcal":100,"protein":4,"unitName":"g","type":"amount","baseAmount":100},{"name":"Egg (boiled)","kcal":60,"protein":6,"unitName":"piece","type":"unit"},{"name":"Fish","kcal":60,"protein":12,"unitName":"piece","type":"unit"},{"name":"Luchi","kcal":89,"protein":1.2,"unitName":"piece","type":"unit"},{"name":"Masala Dosa","kcal":165,"protein":3.5,"unitName":"piece","type":"unit"},{"name":"Omelette","kcal":80,"protein":6,"unitName":"piece","type":"unit"},{"name":"Paneer","kcal":170,"protein":16,"unitName":"g","type":"amount","baseAmount":65},{"name":"Peanut","kcal":567,"protein":26,"unitName":"g","type":"amount","baseAmount":100},{"name":"Rice","kcal":100,"protein":3,"unitName":"g","type":"amount","baseAmount":100},{"name":"Roti","kcal":100,"protein":3,"unitName":"piece","type":"unit"},{"name":"Sabji","kcal":100,"protein":3,"unitName":"g","type":"amount","baseAmount":100},{"name":"Soyabean","kcal":170,"protein":26,"unitName":"g","type":"amount","baseAmount":50}]');
-        });
+    // Check if 'healthifier-masterList' exists and is not empty
+    const existingList = localStorage.getItem('healthifier-masterList');
+
+    if (!existingList || existingList.trim() === '' || existingList === '[]') {
+        // A basic list of food items
+        const masterList = [
+            {"name":"Banana","kcal":110,"protein":1,"unitName":"piece","type":"unit"},
+            {"name":"Chana","kcal":102,"protein":8,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Chicken","kcal":165,"protein":29,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Chola (boiled)","kcal":130,"protein":9,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Chola (raw)","kcal":130,"protein":19,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Dahi","kcal":80,"protein":4,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Dahi (misti)","kcal":175,"protein":4,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Dal","kcal":100,"protein":4,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Egg (boiled)","kcal":60,"protein":6,"unitName":"piece","type":"unit"},
+            {"name":"Fish","kcal":60,"protein":12,"unitName":"piece","type":"unit"},
+            {"name":"Luchi","kcal":89,"protein":1.2,"unitName":"piece","type":"unit"},
+            {"name":"Masala Dosa","kcal":165,"protein":3.5,"unitName":"piece","type":"unit"},
+            {"name":"Omelette","kcal":80,"protein":6,"unitName":"piece","type":"unit"},
+            {"name":"Paneer","kcal":170,"protein":16,"unitName":"g","type":"amount","baseAmount":65},
+            {"name":"Peanut","kcal":567,"protein":26,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Rice","kcal":100,"protein":3,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Roti","kcal":100,"protein":3,"unitName":"piece","type":"unit"},
+            {"name":"Sabji","kcal":100,"protein":3,"unitName":"g","type":"amount","baseAmount":100},
+            {"name":"Soyabean","kcal":170,"protein":26,"unitName":"g","type":"amount","baseAmount":50}
+        ];
+
+        localStorage.setItem('healthifier-masterList', JSON.stringify(masterList));
+        console.log('healthifier-masterList initialized.');
+    } else {
+        console.log('healthifier-masterList already exists. Skipping initialization.');
+    }
+});
 
     </script>
 </body>
